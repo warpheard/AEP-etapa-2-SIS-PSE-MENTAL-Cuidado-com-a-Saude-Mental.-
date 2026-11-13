@@ -1,0 +1,357 @@
+//SIS-PSE MENTAL - Cuidado com a Saude Mental
+//Cadastro de estudantes do Programa Saude na Escola (PSE).
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
+#include <errno.h>
+#include <limits.h>
+
+#define MAX_ESTUDANTES 50
+#define TAM_NOME 100
+#define TAM_TURMA 30
+#define TAM_ESCOLA 100
+#define TAM_MAX_CAMPO 100
+
+typedef struct {
+    int codigo;
+    char nome[TAM_NOME];
+    char turma[TAM_TURMA];
+    char escola[TAM_ESCOLA];
+} Estudante;
+
+static Estudante estudantes[MAX_ESTUDANTES];
+static int totalEstudantes = 0;
+
+/* ---------- Leitura e validacao de entradas ---------- */
+
+static void descartarRestoDaLinha(void) {
+    int c;
+    while ((c = getchar()) != '\n' && c != EOF) {
+    }
+}
+
+/* Remove espacos no inicio e no fim do texto. */
+static void aparar(char *texto) {
+    size_t inicio = 0;
+    size_t fim = strlen(texto);
+
+    while (fim > 0 && isspace((unsigned char)texto[fim - 1])) {
+        fim--;
+    }
+    texto[fim] = '\0';
+    while (texto[inicio] != '\0' && isspace((unsigned char)texto[inicio])) {
+        inicio++;
+    }
+    if (inicio > 0) {
+        memmove(texto, texto + inicio, fim - inicio + 1);
+    }
+}
+
+/* Le uma linha inteira. Retorna 0 se a entrada acabou (EOF). */
+static int lerLinha(const char *mensagem, char *destino, size_t tamanho) {
+    size_t len;
+
+    printf("%s", mensagem);
+    if (fgets(destino, (int)tamanho, stdin) == NULL) {
+        return 0;
+    }
+    len = strlen(destino);
+    if (len > 0 && destino[len - 1] == '\n') {
+        destino[len - 1] = '\0';
+    } else {
+        descartarRestoDaLinha();
+    }
+    aparar(destino);
+    return 1;
+}
+
+/* Le um texto obrigatorio (nao aceita vazio). */
+static int lerTextoObrigatorio(const char *mensagem, char *destino, size_t tamanho) {
+    while (1) {
+        if (!lerLinha(mensagem, destino, tamanho)) {
+            return 0;
+        }
+        if (destino[0] != '\0') {
+            return 1;
+        }
+        printf("Campo obrigatorio. Tente novamente.\n");
+    }
+}
+
+/* Le um numero inteiro, repetindo ate a entrada ser valida. */
+static int lerInteiro(const char *mensagem, int *valor) {
+    char entrada[32];
+    char *fim;
+    long numero;
+
+    while (1) {
+        if (!lerLinha(mensagem, entrada, sizeof entrada)) {
+            return 0;
+        }
+        errno = 0;
+        numero = strtol(entrada, &fim, 10);
+        if (entrada[0] != '\0' && *fim == '\0' && errno == 0 &&
+            numero >= INT_MIN && numero <= INT_MAX) {
+            *valor = (int)numero;
+            return 1;
+        }
+        printf("Entrada invalida. Digite um numero inteiro.\n");
+    }
+}
+
+/* Le um codigo de estudante (inteiro positivo). */
+static int lerCodigo(int *codigo) {
+    while (1) {
+        if (!lerInteiro("Codigo do estudante: ", codigo)) {
+            return 0;
+        }
+        if (*codigo > 0) {
+            return 1;
+        }
+        printf("O codigo deve ser maior que zero.\n");
+    }
+}
+
+/* Campo opcional na alteracao: Enter mantem o valor atual. */
+static void lerCampoOpcional(const char *mensagem, char *campo, size_t tamanho) {
+    char entrada[TAM_MAX_CAMPO];
+
+    if (lerLinha(mensagem, entrada, tamanho) && entrada[0] != '\0') {
+        strcpy(campo, entrada);
+    }
+}
+
+/* ---------- Apoio ---------- */
+
+static int buscarIndice(int codigo) {
+    int i;
+    for (i = 0; i < totalEstudantes; i++) {
+        if (estudantes[i].codigo == codigo) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+static int mesmaTurma(const char *a, const char *b) {
+    while (*a != '\0' && *b != '\0') {
+        if (tolower((unsigned char)*a) != tolower((unsigned char)*b)) {
+            return 0;
+        }
+        a++;
+        b++;
+    }
+    return *a == *b;
+}
+
+static void exibirEstudante(const Estudante *e) {
+    printf("\nCodigo: %d\n", e->codigo);
+    printf("Nome: %s\n", e->nome);
+    printf("Turma: %s\n", e->turma);
+    printf("Escola: %s\n", e->escola);
+}
+
+/* ---------- Funcionalidades ---------- */
+
+static void cadastrarEstudante(void) {
+    Estudante novo;
+
+    if (totalEstudantes >= MAX_ESTUDANTES) {
+        printf("\nLimite de cadastros atingido (%d estudantes)!\n", MAX_ESTUDANTES);
+        return;
+    }
+
+    printf("\n===== CADASTRO DE ESTUDANTE =====\n");
+    if (!lerCodigo(&novo.codigo)) {
+        return;
+    }
+    if (buscarIndice(novo.codigo) != -1) {
+        printf("\nJa existe um estudante com o codigo %d.\n", novo.codigo);
+        return;
+    }
+    if (!lerTextoObrigatorio("Nome do estudante: ", novo.nome, sizeof novo.nome) ||
+        !lerTextoObrigatorio("Turma: ", novo.turma, sizeof novo.turma) ||
+        !lerTextoObrigatorio("Escola: ", novo.escola, sizeof novo.escola)) {
+        return;
+    }
+
+    estudantes[totalEstudantes] = novo;
+    totalEstudantes++;
+    printf("\nEstudante cadastrado com sucesso!\n");
+}
+
+static void listarEstudantes(void) {
+    int i;
+
+    if (totalEstudantes == 0) {
+        printf("\nNenhum estudante cadastrado.\n");
+        return;
+    }
+
+    printf("\n===== ESTUDANTES CADASTRADOS (%d) =====\n", totalEstudantes);
+    for (i = 0; i < totalEstudantes; i++) {
+        exibirEstudante(&estudantes[i]);
+    }
+}
+
+static void buscarEstudante(void) {
+    int codigo;
+    int indice;
+
+    printf("\n===== BUSCAR ESTUDANTE =====\n");
+    if (!lerCodigo(&codigo)) {
+        return;
+    }
+    indice = buscarIndice(codigo);
+    if (indice == -1) {
+        printf("\nEstudante com codigo %d nao encontrado.\n", codigo);
+        return;
+    }
+    exibirEstudante(&estudantes[indice]);
+}
+
+static void alterarEstudante(void) {
+    int codigo;
+    int indice;
+    Estudante *e;
+
+    printf("\n===== ALTERAR ESTUDANTE =====\n");
+    if (!lerCodigo(&codigo)) {
+        return;
+    }
+    indice = buscarIndice(codigo);
+    if (indice == -1) {
+        printf("\nEstudante com codigo %d nao encontrado.\n", codigo);
+        return;
+    }
+
+    e = &estudantes[indice];
+    exibirEstudante(e);
+    printf("\nPressione Enter para manter o valor atual.\n");
+    lerCampoOpcional("Novo nome: ", e->nome, sizeof e->nome);
+    lerCampoOpcional("Nova turma: ", e->turma, sizeof e->turma);
+    lerCampoOpcional("Nova escola: ", e->escola, sizeof e->escola);
+    printf("\nDados atualizados com sucesso!\n");
+}
+
+static void removerEstudante(void) {
+    int codigo;
+    int indice;
+    int i;
+    char resposta[8];
+
+    printf("\n===== REMOVER ESTUDANTE =====\n");
+    if (!lerCodigo(&codigo)) {
+        return;
+    }
+    indice = buscarIndice(codigo);
+    if (indice == -1) {
+        printf("\nEstudante com codigo %d nao encontrado.\n", codigo);
+        return;
+    }
+
+    exibirEstudante(&estudantes[indice]);
+    if (!lerLinha("\nConfirma a remocao? (s/n): ", resposta, sizeof resposta)) {
+        return;
+    }
+    if (tolower((unsigned char)resposta[0]) != 's') {
+        printf("\nRemocao cancelada.\n");
+        return;
+    }
+
+    for (i = indice; i < totalEstudantes - 1; i++) {
+        estudantes[i] = estudantes[i + 1];
+    }
+    totalEstudantes--;
+    printf("\nEstudante removido com sucesso!\n");
+}
+
+static void resumoPorTurma(void) {
+    int i;
+    int j;
+    int quantidade;
+    int jaContada;
+
+    if (totalEstudantes == 0) {
+        printf("\nNenhum estudante cadastrado.\n");
+        return;
+    }
+
+    printf("\n===== RESUMO POR TURMA =====\n");
+    for (i = 0; i < totalEstudantes; i++) {
+        jaContada = 0;
+        for (j = 0; j < i; j++) {
+            if (mesmaTurma(estudantes[i].turma, estudantes[j].turma)) {
+                jaContada = 1;
+                break;
+            }
+        }
+        if (jaContada) {
+            continue;
+        }
+        quantidade = 0;
+        for (j = i; j < totalEstudantes; j++) {
+            if (mesmaTurma(estudantes[i].turma, estudantes[j].turma)) {
+                quantidade++;
+            }
+        }
+        printf("Turma %s: %d estudante(s)\n", estudantes[i].turma, quantidade);
+    }
+    printf("Total geral: %d estudante(s)\n", totalEstudantes);
+}
+
+static void exibirMenu(void) {
+    printf("\n=================================\n");
+    printf("         SIS-PSE MENTAL\n");
+    printf("   Cuidado com a Saude Mental\n");
+    printf("=================================\n");
+    printf("1 - Cadastrar estudante\n");
+    printf("2 - Listar estudantes\n");
+    printf("3 - Buscar estudante por codigo\n");
+    printf("4 - Alterar dados do estudante\n");
+    printf("5 - Remover estudante\n");
+    printf("6 - Resumo por turma\n");
+    printf("0 - Sair\n");
+}
+
+int main(void) {
+    int opcao;
+
+    do {
+        exibirMenu();
+        if (!lerInteiro("\nEscolha uma opcao: ", &opcao)) {
+            break;
+        }
+
+        switch (opcao) {
+            case 1:
+                cadastrarEstudante();
+                break;
+            case 2:
+                listarEstudantes();
+                break;
+            case 3:
+                buscarEstudante();
+                break;
+            case 4:
+                alterarEstudante();
+                break;
+            case 5:
+                removerEstudante();
+                break;
+            case 6:
+                resumoPorTurma();
+                break;
+            case 0:
+                printf("\nSistema encerrado.\n");
+                break;
+            default:
+                printf("\nOpcao invalida!\n");
+        }
+    } while (opcao != 0);
+
+
+    return 0;
+}
