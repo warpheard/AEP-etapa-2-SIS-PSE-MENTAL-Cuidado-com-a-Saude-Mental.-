@@ -131,7 +131,7 @@ Total geral: 3 estudante(s)
 └── docs/          # diagrama de casos de uso, manual e demais artefatos
 ```
 
-## Casos de uso
+## Diagrama do caso de uso
 
 ![Diagrama de casos de uso](https://github.com/warpheard/AEP-etapa-1/blob/c5987d6a6c72b6a4c26d64450cc032ac4cda3bd4/diagrama_casos_de_uso.svg)
 
