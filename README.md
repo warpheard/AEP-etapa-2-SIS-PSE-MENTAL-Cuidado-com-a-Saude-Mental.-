@@ -7,8 +7,8 @@ Projeto desenvolvido para a disciplina de Linguagem e Técnicas de Programação
 **Integrantes:**
 Letícia Caumo Botelho – R.A: 26008981-2
 Mateus Beza – R.A: 25361132-2
-Victor Gabriel Pereira Garcia - RA: 26012693-2
-Pedro Roberto Waldhelm da Silva - RA: 26015133-2
+Victor Gabriel Pereira Garcia - R.A: 26012693-2
+Pedro Roberto Waldhelm da Silva - R.A: 26015133-2
 
 ---
 
